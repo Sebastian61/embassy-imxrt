@@ -531,6 +531,137 @@ impl<'r> RtcDatetime<'r> {
     }
 }
 
+/// check valid datetime.
+pub fn test_is_valid_datetime(time: &Datetime) -> Result<(), Error> {
+    // Validate year
+    if time.year < 1970 {
+        return Err(Error::InvalidYear);
+    }
+
+    // Validate month
+    if time.month < 1 || time.month > 12 {
+        return Err(Error::InvalidMonth);
+    }
+
+    // Validate day
+    if time.day < 1 {
+        return Err(Error::InvalidDay);
+    }
+
+    match time.month {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => {
+            if time.day > 31 {
+                return Err(Error::InvalidDay);
+            }
+        }
+        4 | 6 | 9 | 11 => {
+            if time.day > 30 {
+                return Err(Error::InvalidDay);
+            }
+        }
+        2 => {
+            if test_is_leap_year(time.year) {
+                if time.day > 29 {
+                    return Err(Error::InvalidDay);
+                }
+            } else if time.day > 28 {
+                return Err(Error::InvalidDay);
+            }
+        }
+        _ => return Err(Error::InvalidDay),
+    }
+
+    // Validate hour
+    if time.hour > 23 {
+        return Err(Error::InvalidHour);
+    }
+
+    // Validate minute
+    if time.minute > 59 {
+        return Err(Error::InvalidMinute);
+    }
+
+    // Validate second
+    if time.second > 59 {
+        return Err(Error::InvalidSecond);
+    }
+    Ok(())
+}
+
+fn test_is_leap_year(year: u16) -> bool {
+    (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
+}
+
+fn test_convert_secs_to_datetime(secs: u32) -> Datetime {
+    let mut days = secs / 86400;
+    let mut secs = secs % 86400;
+
+    let mut year = 1970;
+    let mut month = 1;
+    let mut day = 1;
+
+    // Calculate year
+    while days >= 365 {
+        if test_is_leap_year(year) {
+            if days >= 366 {
+                days -= 366;
+            } else {
+                break;
+            }
+        } else {
+            days -= 365;
+        }
+        year += 1;
+    }
+
+    // Calculate month
+    let days_in_month = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30];
+    while days >= days_in_month[month as usize] {
+        if month == 2 && test_is_leap_year(year) {
+            if days >= 29 {
+                days -= 29;
+            } else {
+                break;
+            }
+        } else {
+            days -= days_in_month[month as usize];
+        }
+        month += 1;
+    }
+
+    // Calculate day
+    day += days;
+
+    // Calculate hour, minute, and second
+    let hour = secs / 3600;
+    secs %= 3600;
+    let minute = secs / 60;
+    let second = secs % 60;
+
+    Datetime {
+        year,
+        month,
+        day: day as u8,
+        hour: hour as u8,
+        minute: minute as u8,
+        second: second as u8,
+    }
+}
+
+pub fn test_set_datetime_in_secs(secs: u32) -> Result<(), Error> {
+    let r = rtc();
+    let datetime = test_convert_secs_to_datetime(secs);
+    // SAFETY: Clear RTC_EN bit before setting time to handle race condition
+    //         when the count is in middle of a transition
+    //         There is 21 mS inacurracy in the time set
+    //         Todo: https://github.com/OpenDevicePartnership/embassy-imxrt/issues/121
+    r.ctrl().modify(|_r, w| w.rtc_en().disable());
+    test_is_valid_datetime(&datetime)?;
+    r.count().write(|w| unsafe { w.bits(secs) });
+    r.ctrl().modify(|_r, w| w.rtc_en().enable());
+    Ok(())
+}
+
 #[cfg(feature = "rt")]
 #[allow(non_snake_case)]
 #[interrupt]
