@@ -685,7 +685,7 @@ pub fn test_get_datetime() -> (Datetime, Result<(), Error>) {
 }
 
 /// Get the datetime as UTC seconds
-pub fn get_datetime_as_secs() -> (u32, Result<(), Error>) {
+pub fn test_get_datetime_as_secs() -> (u32, Result<(), Error>) {
     let r = rtc();
     //  If RTC is not enabled return error
     if r.ctrl().read().rtc_en().bit_is_clear() {
