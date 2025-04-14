@@ -684,6 +684,29 @@ pub fn test_get_datetime() -> (Datetime, Result<(), Error>) {
     }
 }
 
+/// Get the datetime as UTC seconds
+pub fn get_datetime_as_secs() -> (u32, Result<(), Error>) {
+    let r = rtc();
+    //  If RTC is not enabled return error
+    if r.ctrl().read().rtc_en().bit_is_clear() {
+        return (0, Err(Error::RTCNotEnabled));
+    }
+    let secs: u32;
+    loop {
+        let secs1 = r.count().read().bits();
+        let secs2 = r.count().read().bits();
+        if secs1 == secs2 {
+            secs = secs1;
+            break;
+        }
+    }
+    let datetime = test_convert_secs_to_datetime(secs);
+    let res = test_is_valid_datetime(&datetime);
+    {
+        (secs, res)
+    }
+}
+
 #[cfg(feature = "rt")]
 #[allow(non_snake_case)]
 #[interrupt]
