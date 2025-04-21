@@ -368,7 +368,7 @@ impl<'r> RtcDatetime<'r> {
         let mut days: u32 = 0;
         let mut year: u16 = datetime.year;
         let mut month: u8 = datetime.month;
-        let day: u32 = datetime.day as u32;
+        let day: u32 = datetime.day as u32 - 1;
 
         // Calculate days from 1970 to the current year
         while year > 1970 {
@@ -390,7 +390,7 @@ impl<'r> RtcDatetime<'r> {
         }
 
         // Calculate days from the first day of the month to the current day
-        days += day - 1;
+        days += day;
 
         // Calculate seconds from the first day of the month to the current day
         let secs = datetime.second as u32 + datetime.minute as u32 * 60 + datetime.hour as u32 * 3600;
