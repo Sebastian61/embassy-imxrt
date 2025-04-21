@@ -399,7 +399,7 @@ impl<'r> RtcDatetime<'r> {
     }
 
     /// Convert seconds since 1970-01-01 00:00:00 to a datetime.
-    fn convert_secs_to_datetime(&self, secs: u32) -> Datetime {
+    pub fn convert_secs_to_datetime(&self, secs: u32) -> Datetime {
         let mut days = secs / 86400;
         let mut secs = secs % 86400;
 
