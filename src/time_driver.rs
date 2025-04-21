@@ -405,7 +405,7 @@ impl<'r> RtcDatetime<'r> {
 
         let mut year = 1970;
         let mut month = 1;
-        let mut day = 0;
+        let mut day = 1;
 
         // Calculate year
         while days >= 365 {
