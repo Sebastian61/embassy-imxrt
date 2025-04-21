@@ -470,15 +470,10 @@ impl<'r> RtcDatetime<'r> {
         Ok(())
     }
 
+    ///Set the datetime in seconds
     pub fn set_datetime_in_secs(&self, secs: u32) -> Result<(), Error> {
         let r = rtc();
-        let datetime = &self.convert_secs_to_datetime(secs);
-        // SAFETY: Clear RTC_EN bit before setting time to handle race condition
-        //         when the count is in middle of a transition
-        //         There is 21 mS inacurracy in the time set
-        //         Todo: https://github.com/OpenDevicePartnership/embassy-imxrt/issues/121
         r.ctrl().modify(|_r, w| w.rtc_en().disable());
-        self.is_valid_datetime(datetime)?;
         r.count().write(|w| unsafe { w.bits(secs) });
         r.ctrl().modify(|_r, w| w.rtc_en().enable());
         Ok(())
@@ -508,13 +503,13 @@ impl<'r> RtcDatetime<'r> {
     }
 
     /// Get the datetime as UTC seconds
-    pub fn get_datetime_as_secs(&self) -> (u32, Result<(), Error>) {
+    pub fn get_datetime_as_secs(&self) -> Result<u32, Error> {
         let r = rtc();
+        let secs;
         //  If RTC is not enabled return error
         if r.ctrl().read().rtc_en().bit_is_clear() {
-            return (0, Err(Error::RTCNotEnabled));
+            return Err(Error::RTCNotEnabled);
         }
-        let secs: u32;
         loop {
             let secs1 = r.count().read().bits();
             let secs2 = r.count().read().bits();
@@ -523,11 +518,7 @@ impl<'r> RtcDatetime<'r> {
                 break;
             }
         }
-        let datetime = self.convert_secs_to_datetime(secs);
-        let res = self.is_valid_datetime(&datetime);
-        {
-            (secs, res)
-        }
+        Ok(secs)
     }
 }
 
